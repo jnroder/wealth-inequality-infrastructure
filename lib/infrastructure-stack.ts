@@ -15,13 +15,24 @@ export class InfrastructureStack extends cdk.Stack {
     super(scope, id, props);
 
     // Lambda and API Gateway setup
-    const handler = new NodejsFunction(this, 'FredDataHandler', {
+    const fredHandler = new NodejsFunction(this, 'FredDataHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: path.join(__dirname, '../..', 'server', 'lambda.ts'),
+      entry: path.join(__dirname, '../..', 'server', 'fred-lambda.ts'),
       handler: 'handler',
       timeout: cdk.Duration.seconds(10),
       environment: {
         FRED_API_KEY: process.env.FRED_API_KEY || '',
+      },
+    });
+
+    // Census Lambda
+    const censusHandler = new NodejsFunction(this, 'CensusDataHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../..', 'server', 'census-lambda.ts'),
+      handler: 'handler',
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        CENSUS_API_KEY: process.env.CENSUS_API_KEY || '',
       },
     });
 
@@ -32,8 +43,13 @@ export class InfrastructureStack extends cdk.Stack {
       },
     });
 
+    // FRED endpoint
     const fredData = api.root.addResource('wealth-data');
-    fredData.addMethod('GET', new apigateway.LambdaIntegration(handler));
+    fredData.addMethod('GET', new apigateway.LambdaIntegration(fredHandler));
+
+    // Census endpoint
+    const censusData = api.root.addResource('census-data');
+    censusData.addMethod('GET', new apigateway.LambdaIntegration(censusHandler));
 
     // S3 Frontend setup
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {

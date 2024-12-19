@@ -23,7 +23,7 @@
       Code:
         S3Bucket:
           Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
-        S3Key: a9ef4d0ec373de97a3fb97bb3d34005885a51b730ff9f6fbbe243ddf7c4fbbb4.zip
+        S3Key: aebefe005c8846b4e2266daaae454480e53f25e580bfcaa9c08afe2729525515.zip
       Environment:
         Variables:
           FRED_API_KEY: 84e174f160b8880552321e58ce26e9cc
@@ -38,7 +38,49 @@
       - FredDataHandlerServiceRoleF4FECE46
     Metadata:
       aws:cdk:path: InfrastructureStack/FredDataHandler/Resource
-      aws:asset:path: C:\projects\wealth-inequality\infrastructure\cdk.out\asset.a9ef4d0ec373de97a3fb97bb3d34005885a51b730ff9f6fbbe243ddf7c4fbbb4
+      aws:asset:path: C:\projects\wealth-inequality\infrastructure\cdk.out\asset.aebefe005c8846b4e2266daaae454480e53f25e580bfcaa9c08afe2729525515
+      aws:asset:is-bundled: true
+      aws:asset:property: Code
+  CensusDataHandlerServiceRoleBE12C863:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: InfrastructureStack/CensusDataHandler/ServiceRole/Resource
+  CensusDataHandler982B0389:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: 86824d19917cff0d912664e8b6eef0bc22f75d0ef675ff03c5c8ee5ef7d46d38.zip
+      Environment:
+        Variables:
+          CENSUS_API_KEY: 496bb239e791ed1d927055588f35b53ffd828177
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - CensusDataHandlerServiceRoleBE12C863
+          - Arn
+      Runtime: nodejs18.x
+      Timeout: 30
+    DependsOn:
+      - CensusDataHandlerServiceRoleBE12C863
+    Metadata:
+      aws:cdk:path: InfrastructureStack/CensusDataHandler/Resource
+      aws:asset:path: C:\projects\wealth-inequality\infrastructure\cdk.out\asset.86824d19917cff0d912664e8b6eef0bc22f75d0ef675ff03c5c8ee5ef7d46d38
       aws:asset:is-bundled: true
       aws:asset:property: Code
   FredApi20D19548:
@@ -47,13 +89,16 @@
       Name: Fred Data Service
     Metadata:
       aws:cdk:path: InfrastructureStack/FredApi/Resource
-  FredApiDeployment0EAA9896c545cb008c12dec744488668826a9db5:
+  FredApiDeployment0EAA98967c61afd46e87e6afe4a84000bdd58eb2:
     Type: AWS::ApiGateway::Deployment
     Properties:
       Description: Automatically created by the RestApi construct
       RestApiId:
         Ref: FredApi20D19548
     DependsOn:
+      - FredApicensusdataGET7BCDB8B7
+      - FredApicensusdataOPTIONS40E0A12C
+      - FredApicensusdata03218A18
       - FredApiOPTIONS9B013E80
       - FredApiwealthdataGETB87A024A
       - FredApiwealthdataOPTIONS28A5364E
@@ -64,7 +109,7 @@
     Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId:
-        Ref: FredApiDeployment0EAA9896c545cb008c12dec744488668826a9db5
+        Ref: FredApiDeployment0EAA98967c61afd46e87e6afe4a84000bdd58eb2
       RestApiId:
         Ref: FredApi20D19548
       StageName: prod
@@ -214,6 +259,120 @@
         Ref: FredApi20D19548
     Metadata:
       aws:cdk:path: InfrastructureStack/FredApi/Default/wealth-data/GET/Resource
+  FredApicensusdata03218A18:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - FredApi20D19548
+          - RootResourceId
+      PathPart: census-data
+      RestApiId:
+        Ref: FredApi20D19548
+    Metadata:
+      aws:cdk:path: InfrastructureStack/FredApi/Default/census-data/Resource
+  FredApicensusdataOPTIONS40E0A12C:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+          StatusCode: "204"
+      ResourceId:
+        Ref: FredApicensusdata03218A18
+      RestApiId:
+        Ref: FredApi20D19548
+    Metadata:
+      aws:cdk:path: InfrastructureStack/FredApi/Default/census-data/OPTIONS/Resource
+  FredApicensusdataGETApiPermissionInfrastructureStackFredApiC4C08F89GETcensusdataE1E9F5D3:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - CensusDataHandler982B0389
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: FredApi20D19548
+            - /
+            - Ref: FredApiDeploymentStageprod2E740C25
+            - /GET/census-data
+    Metadata:
+      aws:cdk:path: InfrastructureStack/FredApi/Default/census-data/GET/ApiPermission.InfrastructureStackFredApiC4C08F89.GET..census-data
+  FredApicensusdataGETApiPermissionTestInfrastructureStackFredApiC4C08F89GETcensusdata1F0CCA6A:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - CensusDataHandler982B0389
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: FredApi20D19548
+            - /test-invoke-stage/GET/census-data
+    Metadata:
+      aws:cdk:path: InfrastructureStack/FredApi/Default/census-data/GET/ApiPermission.Test.InfrastructureStackFredApiC4C08F89.GET..census-data
+  FredApicensusdataGET7BCDB8B7:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - CensusDataHandler982B0389
+                  - Arn
+              - /invocations
+      ResourceId:
+        Ref: FredApicensusdata03218A18
+      RestApiId:
+        Ref: FredApi20D19548
+    Metadata:
+      aws:cdk:path: InfrastructureStack/FredApi/Default/census-data/GET/Resource
   WebsiteBucket75C24D94:
     Type: AWS::S3::Bucket
     Properties:
@@ -331,7 +490,7 @@
       - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
     Metadata:
       aws:cdk:path: InfrastructureStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler
-      aws:asset:path: C:\Users\Jared\AppData\Local\Temp\cdk-custom-resourceVyAT7W
+      aws:asset:path: C:\Users\Jared\AppData\Local\Temp\cdk-custom-resourceZgdl6V
       aws:asset:property: Code
   Distribution830FAC52:
     Type: AWS::CloudFront::Distribution
@@ -385,7 +544,7 @@
       SourceBucketNames:
         - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
       SourceObjectKeys:
-        - 1e659b559f78e7038ef6081a8b876ac96d57f442c00dc035d3de5aa75ac1794b.zip
+        - 43ce65355cf58dbf3c8a5ee246d7d5ef5886c5fd3a560eef0f4ed90e76ea73e4.zip
       DestinationBucketName:
         Ref: WebsiteBucket75C24D94
       Prune: true
