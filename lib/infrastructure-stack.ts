@@ -15,10 +15,23 @@ export class InfrastructureStack extends cdk.Stack {
     super(scope, id, props);
 
     // Lambda and API Gateway setup
-    const fredHandler = new NodejsFunction(this, 'FredDataHandler', {
+
+    // FRED net worth of top 1% Lambda
+    const fredHandler = new NodejsFunction(this, "FredDataHandler", {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, "../..", "server", "fred-lambda.ts"),
+      handler: "handlerOnePercent",
+      timeout: cdk.Duration.seconds(10),
+      environment: {
+        FRED_API_KEY: process.env.FRED_API_KEY || "",
+      },
+    });
+
+    // FRED Earnings Gap Lambda
+    const fredEarningsGapHandler = new NodejsFunction(this, 'FredEarningsGapHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../..', 'server', 'fred-lambda.ts'),
-      handler: 'handler',
+      handler: 'handlerEarningsGap',
       timeout: cdk.Duration.seconds(10),
       environment: {
         FRED_API_KEY: process.env.FRED_API_KEY || '',
@@ -36,8 +49,8 @@ export class InfrastructureStack extends cdk.Stack {
       },
     });
 
-    const api = new apigateway.RestApi(this, 'FredApi', {
-      restApiName: 'Fred Data Service',
+    const api = new apigateway.RestApi(this, 'WealthInequalityApi', {
+      restApiName: 'Wealth Inequality Data Service',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
       },
@@ -46,6 +59,9 @@ export class InfrastructureStack extends cdk.Stack {
     // FRED endpoint
     const fredData = api.root.addResource('wealth-data');
     fredData.addMethod('GET', new apigateway.LambdaIntegration(fredHandler));
+
+    const fredEarningsGap = api.root.addResource('earnings-gap');
+    fredEarningsGap.addMethod('GET', new apigateway.LambdaIntegration(fredEarningsGapHandler));
 
     // Census endpoint
     const censusData = api.root.addResource('census-data');
